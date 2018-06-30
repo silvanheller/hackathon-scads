@@ -1,9 +1,11 @@
 package eu.streamline.hackathon.flink.scala.job
 
+import java.io.File
 import java.util.Date
 
 import eu.streamline.hackathon.common.data.GDELTEvent
 import eu.streamline.hackathon.flink.operations.GDELTInputFormat
+import org.apache.commons.io.FileUtils
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.utils.ParameterTool
 import org.apache.flink.core.fs.Path
@@ -16,6 +18,9 @@ import org.apache.flink.streaming.api.windowing.time.Time
 object FlinkScalaJob {
 
   def main(args: Array[String]): Unit = {
+
+    val ashery = false
+    val lukasHeader = false
 
     val parameters = ParameterTool.fromArgs(args)
     val pathToGDELT = parameters.get("path")
@@ -45,7 +50,14 @@ object FlinkScalaJob {
         element.dateAdded.getTime
       }
     })
+    if (ashery) {
+      val file = new File("storage/data.csv")
+      val header = "country\treligion\tgoldstein\tavgTone"
+      FileUtils.writeStringToFile(file, s"$header\n", true)
 
+      filteredStream.filter(el => el.actor1Geo_countryCode != null && el.actor1Code_religion1Code != null).addSink(el => FileUtils.writeStringToFile(file, s"${el.actor1Geo_countryCode}\t${el.actor1Code_religion1Code.substring(0, 3)}\t${el.goldstein}\t${el.avgTone}\n", true))
+
+    }
     val keyed1Stream = filteredStream
       .filter(event => event.actor1Geo_countryCode != null
         && event.actor1Code_religion1Code != null)
@@ -62,7 +74,15 @@ object FlinkScalaJob {
 
     val aggregated1Stream: DataStream[AccumulatorResult] = keyed1Stream.window(TumblingEventTimeWindows.of(Time.days(200))).aggregate(new ProjectNameAggregation())
 
-    aggregated1Stream.addSink(res => System.out.println("Result: " + res))
+    val file = new File("storage/export.csv")
+
+    file.delete()
+
+    if (lukasHeader) {
+      FileUtils.writeStringToFile(file, "country,religionPrefix,actorNumber,count,avgGoldstein,avgAvgTone,sumQuadClass1,sumQuadClass2,sumQuadClass3,sumQuadClass4", true)
+    }
+
+    aggregated1Stream.addSink(res => FileUtils.writeStringToFile(file, res.productIterator.mkString(",") + "\n", true))
 
     env.execute("Flink Scala GDELT Analyzer")
 
