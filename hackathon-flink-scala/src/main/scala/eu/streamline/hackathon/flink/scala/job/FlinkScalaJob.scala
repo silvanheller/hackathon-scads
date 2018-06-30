@@ -58,6 +58,7 @@ object FlinkScalaJob {
       filteredStream.filter(el => el.actor1Geo_countryCode != null && el.actor1Code_religion1Code != null).addSink(el => FileUtils.writeStringToFile(file, s"${el.actor1Geo_countryCode}\t${el.actor1Code_religion1Code.substring(0, 3)}\t${el.goldstein}\t${el.avgTone}\n", true))
 
     }
+
     val keyed1Stream = filteredStream
       .filter(event => event.actor1Geo_countryCode != null
         && event.actor1Code_religion1Code != null)
@@ -67,12 +68,24 @@ object FlinkScalaJob {
         }
         event
       })
-      .map(event => GDELTEventWrapper(event, event.actor1Geo_countryCode, event.actor1Code_religion1Code.substring(0, 3), 1))
+      .map(event => GDELTEventWrapper(event, event.actor1Geo_countryCode, event.actor1Code_religion1Code.substring(0, 3), actorNumber = 1))
       .keyBy(wrapper => wrapper.country + wrapper.religionPrefix)
 
-    //TODO keyed2Stream
+    val keyed2Stream = filteredStream
+      .filter(event => event.actor2Geo_countryCode != null
+        && event.actor2Code_religion1Code != null)
+      .map(event => {
+        if (event.actor2Geo_countryCode.length != 2) {
+          System.err.println("Country code is not length 2: " + event.actor2Geo_countryCode)
+        }
+        event
+      })
+      .map(event => GDELTEventWrapper(event, event.actor2Geo_countryCode, event.actor2Code_religion1Code.substring(0, 3), actorNumber = 2))
+      .keyBy(wrapper => wrapper.country + wrapper.religionPrefix)
 
     val aggregated1Stream: DataStream[AccumulatorResult] = keyed1Stream.window(TumblingEventTimeWindows.of(Time.days(200))).aggregate(new ProjectNameAggregation())
+
+    val aggregated2Stream: DataStream[AccumulatorResult] = keyed2Stream.window(TumblingEventTimeWindows.of(Time.days(200))).aggregate(new ProjectNameAggregation())
 
     val file = new File("storage/export.csv")
 
@@ -83,6 +96,7 @@ object FlinkScalaJob {
     }
 
     aggregated1Stream.addSink(res => FileUtils.writeStringToFile(file, res.productIterator.mkString(",") + "\n", true))
+    aggregated2Stream.addSink(res => FileUtils.writeStringToFile(file, res.productIterator.mkString(",") + "\n", true))
 
     env.execute("Flink Scala GDELT Analyzer")
 
