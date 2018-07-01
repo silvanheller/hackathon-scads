@@ -9,7 +9,7 @@ The structure of both the repository and the code is base on the boilerplate cod
 We used the GDELT Dataset provided by the organizers of the Hackathon [1]
 
 ## Overview
-We aggregate by goldstein, avgTone and quadClass over religion-country combinations. Aggregate Results are stored in the `storage/` folder of the `hackathon-flink-scala/` directory.
+We aggregate by goldstein, avgTone and quadClass over religion-country combinations. Aggregate Results are stored in the `storage/` folder.
 
 ## Run The Code locally (Option 1)
 
