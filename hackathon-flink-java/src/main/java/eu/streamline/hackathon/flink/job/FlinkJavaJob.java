@@ -40,7 +40,6 @@ public class FlinkJavaJob {
 		DataStream<GDELTEvent> source = env
 			.readFile(new GDELTInputFormat(new Path(pathToGDELT)), pathToGDELT).setParallelism(1);
 
-
 		source.filter(new FilterFunction<GDELTEvent>() {
 			@Override
 			public boolean filter(GDELTEvent gdeltEvent) throws Exception {

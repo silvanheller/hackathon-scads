@@ -8,13 +8,26 @@ import scala.collection.JavaConverters._
 
 
 /**
+  * Terrible naming but it's a hackathon.
+  *
+  * This function is responsible for aggregation over a keyed stream of [[GDELTEventWrapper]]s.
+  *
+  * It additionally receives information about the associated [[TimeWindow]].
+  * Since we require this information, using WindowedStream.aggregate is not enough.
+  *
   * @author silvan on 01.07.18.
   */
 class MyWindowFunction(windowSizeInDays: Int) extends WindowFunction[GDELTEventWrapper, WindowResult, String, TimeWindow] {
 
+  /**
+    * Simple avg aggregation over goldstein & avgTone. Additionally percentage-based aggregation over quadclass.
+    */
   override def apply(key: String, w: TimeWindow, iterable: java.lang.Iterable[GDELTEventWrapper], collector: Collector[WindowResult]): Unit = {
-    var country: String = ""
-    var religionPrefix: String = ""
+    /**
+      * Initalization
+      */
+    var country: CountryCode = ""
+    var religionPrefix: ReligionPrefix = ""
     var actorNumber: Int = -1
     var count: Int = 0
     var sumGoldstein: Double = 0
@@ -25,6 +38,9 @@ class MyWindowFunction(windowSizeInDays: Int) extends WindowFunction[GDELTEventW
     var sumQuadClass4: Double = 0
     iterable.asScala.foreach(wrapper => {
       if (count == 0) {
+        /**
+          * Initalize values at first item
+          */
         country = wrapper.country
         religionPrefix = wrapper.religionPrefix
         actorNumber = wrapper.actorNumber
@@ -40,6 +56,9 @@ class MyWindowFunction(windowSizeInDays: Int) extends WindowFunction[GDELTEventW
         case _ => throw new RuntimeException()
       }
     })
+    /**
+      * Compute result
+      */
     val res = WindowResult(country, religionPrefix, actorNumber,
       count,
       sumGoldstein / count,
@@ -48,11 +67,19 @@ class MyWindowFunction(windowSizeInDays: Int) extends WindowFunction[GDELTEventW
       sumQuadClass2.toDouble / count.toDouble,
       sumQuadClass3.toDouble / count.toDouble,
       sumQuadClass4.toDouble / count.toDouble,
+      //1486080000000L has been manually identified as the earliest point in the dataset
       (w.getStart - 1486080000000L) / (1000 * 60 * 60 * 24 * windowSizeInDays),
       w.getStart)
+
+    /**
+      * Hand-off result to collector
+      */
     collector.collect(res)
   }
 
 }
 
+/**
+  * Simple case class for the new type the transformed stream output
+  */
 case class WindowResult(var country: String, var religionPrefix: String, var actorNumber: Int, var count: Int, var avgGoldstein: Double, var avgAvgTone: Double, var quadClass1Percentage: Double, var quadClass2Percentage: Double, var quadClass3Percentage: Double, var quadClass4Percentage: Double, var windowIndex: Long, var windowStart: Long)

@@ -1,6 +1,8 @@
 package eu.streamline.hackathon.flink.scala
 
 /**
+  * Scala allows us to define type aliases which improves Code readability.
+  *
   * @author silvan on 30.06.18.
   */
 package object job {

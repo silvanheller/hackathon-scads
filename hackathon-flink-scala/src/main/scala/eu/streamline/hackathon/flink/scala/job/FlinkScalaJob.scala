@@ -18,6 +18,8 @@ import org.apache.flink.streaming.api.windowing.time.Time
 import scala.collection.JavaConverters._
 
 /**
+  * Usage: *.jar --path /path/to/dataset
+  *
   * Things which are excluded from the analysis:
   * Religion2Code is ignored
   * Subclusters of Religion1Code is ignored
@@ -27,15 +29,15 @@ object FlinkScalaJob {
 
   def main(args: Array[String]): Unit = {
 
-    val ashery = false
+    val ashery = true
     val exportHeader = true
-    val graphVisualization = true
 
     val parameters = ParameterTool.fromArgs(args)
     val pathToGDELT = parameters.get("path")
-    val religion = parameters.get("religion", "CHR")
-    System.out.println("Path: " + pathToGDELT)
 
+    /**
+      * Boilerplate setup code
+      */
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
 
@@ -46,26 +48,26 @@ object FlinkScalaJob {
       .readFile[GDELTEvent](new GDELTInputFormat(new Path(pathToGDELT)), pathToGDELT)
       .setParallelism(1)
 
+    /**
+      * Pre-filter the stream to avoid [[NullPointerException]]s on Goldstein, avgTone and QuadClass since these are metrics we analyze for all streams.
+      */
     val filteredStream: DataStream[GDELTEvent] = source
       .filter((event: GDELTEvent) => {
         event.goldstein != null &&
           event.avgTone != null &&
           event.quadClass != null
-      }) //Prevent Nullpointer exceptions
+      })
+      //Assign Timestamps as provided by the boilerplate-code
       .assignTimestampsAndWatermarks(new BoundedOutOfOrdernessTimestampExtractor[GDELTEvent](Time.seconds(0)) {
       override def extractTimestamp(element: GDELTEvent): Long = {
         element.dateAdded.getTime
       }
     })
 
-    if (graphVisualization) {
-      filteredStream
-        .filter(el => el.actor1Code_religion1Code != null & el.actor2Code_religion1Code != null)
-        .keyBy(_.actor1Code_religion1Code.substring(0, 3))
-        .addSink(new KMeansSink(5))
-    }
-
-    //We parallelize for recepient & actor of the event here.
+    /**
+      * We are both interested in Actor 1 and Actor 2.
+      * The hacky way to parallelize this is to create two different streams which are then keyed by "CCRRR" where CC is the two-letter country code and RRR the three-letter top-level religionprefix.
+      */
     val keyed1Stream = filteredStream
       .filter(event => event.actor1Geo_countryCode != null
         && event.actor1Code_religion1Code != null) //Prevent NPE
@@ -78,7 +80,15 @@ object FlinkScalaJob {
       .map(event => GDELTEventWrapper(event, event.actor2Geo_countryCode, event.actor2Code_religion1Code.substring(0, 3), actorNumber = 2))
       .keyBy(wrapper => wrapper.country + wrapper.religionPrefix)
 
-    //Aggregation global
+    /**
+      * The two keyed streams can be used for global aggregation and window aggregation.
+      * Global aggregation is performed over a 200-day window since we know this property of the dataset.
+      */
+
+    /**
+      * First, global aggregation for actors 1 and two.
+      * Aggregation is performed by applying the [[MyWindowFunction]]
+      */
     val aggregatedGlobal1Stream: DataStream[WindowResult] = keyed1Stream
       .window(TumblingEventTimeWindows.of(Time.days(200)))
       .apply((key, win, it, coll) => new MyWindowFunction(200).apply(key, win, it.asJava, coll))
@@ -89,7 +99,9 @@ object FlinkScalaJob {
 
     val windowSizeInDays = 10
 
-    //Windowed aggregation
+    /**
+      * Then, windowed aggregation for actors one and two. Again done by applying the [[MyWindowFunction]]
+      */
     val aggregatedWindow1Stream: DataStream[WindowResult] = keyed1Stream
       .window(TumblingEventTimeWindows.of(Time.days(windowSizeInDays)))
       .apply((key, win, it, coll) => new MyWindowFunction(windowSizeInDays).apply(key, win, it.asJava, coll))
@@ -98,24 +110,38 @@ object FlinkScalaJob {
       .window(TumblingEventTimeWindows.of(Time.days(windowSizeInDays)))
       .apply((key, win, it, coll) => new MyWindowFunction(windowSizeInDays).apply(key, win, it.asJava, coll))
 
+    /**
+      * At this point, we have four data streams - a global and windowed one for both actors one and two.
+      * Now, we simply export those to .csv-files
+      */
+
     val header = "country,religionPrefix,actorNumber,count,avgGoldstein,avgAvgTone,quadClass1Percentage,quadClass2Percentage,quadClass3Percentage,quadClass4Percentage,windowIndex,windowStart\n"
 
-    //CSV Sink
+
+    /**
+      * Write the headers
+      */
     val globalFile = new File("storage/export_global.csv")
     globalFile.delete()
     if (exportHeader) {
       FileUtils.writeStringToFile(globalFile, header, true)
 
-      (0 to 20).foreach(idx => {
+      (0 to 200 / windowSizeInDays).foreach(idx => {
         val file = new File(s"storage/export_$idx.csv")
         file.delete()
         FileUtils.writeStringToFile(file, header, true)
       })
     }
 
+    /**
+      * Global sinks
+      */
     aggregatedGlobal1Stream.addSink(res => FileUtils.writeStringToFile(globalFile, res.productIterator.mkString(",") + "\n", true))
     aggregatedGlobal2Stream.addSink(res => FileUtils.writeStringToFile(globalFile, res.productIterator.mkString(",") + "\n", true))
 
+    /**
+      * Windowed sinks - write to files which are identified by the windowIndex of the stream-output
+      */
     aggregatedWindow1Stream.addSink(res => {
       val file = new File(s"storage/export_${res.windowIndex}.csv")
       FileUtils.writeStringToFile(file, res.productIterator.mkString(",") + "\n", true)
@@ -125,9 +151,9 @@ object FlinkScalaJob {
       FileUtils.writeStringToFile(file, res.productIterator.mkString(",") + "\n", true)
     })
 
-    /*
-    K-Means export, for ashery
-     */
+    /**
+      * K-Means export for ML Proof-of-concept
+      */
     if (ashery) {
       val f1 = new File("storage/kmeans_aggregated_1.csv")
       f1.delete()
@@ -142,4 +168,7 @@ object FlinkScalaJob {
 
 }
 
-case class GDELTEventWrapper(gDELTEvent: GDELTEvent, country: String, religionPrefix: String, actorNumber: Int)
+/**
+  * Simplifies event-processing by carrying the actor-number which this particular stream is interested in.
+  */
+case class GDELTEventWrapper(gDELTEvent: GDELTEvent, country: CountryCode, religionPrefix: ReligionPrefix, actorNumber: Int)
