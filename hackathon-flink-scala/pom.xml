@@ -119,7 +119,20 @@
 			</exclusions>
 		</dependency>
 
-    </dependencies>
+      <dependency>
+        <groupId>com.github.haifengl</groupId>
+        <artifactId>smile-core</artifactId>
+        <version>1.5.1</version>
+      </dependency>
+
+			<dependency>
+				<groupId>org.jfree</groupId>
+				<artifactId>jfreechart</artifactId>
+				<version>1.5.0</version>
+			</dependency>
+
+
+		</dependencies>
 
 	<build>
         <plugins>

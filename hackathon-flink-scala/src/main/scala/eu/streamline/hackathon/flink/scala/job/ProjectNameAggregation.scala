@@ -5,7 +5,7 @@ import org.apache.flink.api.common.functions.AggregateFunction
 /**
   * @author silvan on 30.06.18.
   */
-class ProjectNameAggregation extends AggregateFunction[GDELTEventWrapper, Accumulator, AccumulatorResult] {
+class ProjectNameAggregation extends AggregateFunction[GDELTEventWrapper, Accumulator, AccumulatorResult] with Serializable {
   override def createAccumulator(): Accumulator = {
     Accumulator("", "", 0, 0, 0, 0, 0, 0, 0, 0)
   }
@@ -40,10 +40,10 @@ class ProjectNameAggregation extends AggregateFunction[GDELTEventWrapper, Accumu
       acc.count,
       acc.sumGoldstein / acc.count,
       acc.sumAvgTone / acc.count,
-      acc.sumQuadClass1,
-      acc.sumQuadClass2,
-      acc.sumQuadClass3,
-      acc.sumQuadClass4)
+      acc.sumQuadClass1.toDouble / acc.count.toDouble,
+      acc.sumQuadClass2.toDouble / acc.count.toDouble,
+      acc.sumQuadClass3.toDouble / acc.count.toDouble,
+      acc.sumQuadClass4.toDouble / acc.count.toDouble)
   }
 
   override def merge(acc1: Accumulator, acc2: Accumulator): Accumulator = {
@@ -74,4 +74,4 @@ class ProjectNameAggregation extends AggregateFunction[GDELTEventWrapper, Accumu
 
 case class Accumulator(var country: String, var religionPrefix: String, var actorNumber: Int, var count: Int, var sumGoldstein: Double, var sumAvgTone: Double, var sumQuadClass1: Int, var sumQuadClass2: Int, var sumQuadClass3: Int, var sumQuadClass4: Int)
 
-case class AccumulatorResult(var country: String, var religionPrefix: String, var actorNumber: Int, var count: Int, var avgGoldstein: Double, var avgAvgTone: Double, var sumQuadClass1: Int, var sumQuadClass2: Int, var sumQuadClass3: Int, var sumQuadClass4: Int)
+case class AccumulatorResult(var country: String, var religionPrefix: String, var actorNumber: Int, var count: Int, var avgGoldstein: Double, var avgAvgTone: Double, var sumQuadClass1: Double, var sumQuadClass2: Double, var sumQuadClass3: Double, var sumQuadClass4: Double)
