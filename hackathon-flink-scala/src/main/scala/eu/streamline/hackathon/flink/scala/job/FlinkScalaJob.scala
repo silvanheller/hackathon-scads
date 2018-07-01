@@ -27,9 +27,9 @@ object FlinkScalaJob {
 
   def main(args: Array[String]): Unit = {
 
-    val ashery = true
+    val ashery = false
     val exportHeader = true
-    val graphVisualization = false
+    val graphVisualization = true
 
     val parameters = ParameterTool.fromArgs(args)
     val pathToGDELT = parameters.get("path")
@@ -79,29 +79,51 @@ object FlinkScalaJob {
       .keyBy(wrapper => wrapper.country + wrapper.religionPrefix)
 
     //Aggregation global
-    val aggregatedGlobal1Stream= keyed1Stream
+    val aggregatedGlobal1Stream: DataStream[WindowResult] = keyed1Stream
       .window(TumblingEventTimeWindows.of(Time.days(200)))
-      .aggregate(new ProjectNameAggregation())
+      .apply((key, win, it, coll) => new MyWindowFunction(200).apply(key, win, it.asJava, coll))
 
-    val aggregatedGlobal2Stream : DataStream[WindowResult] = keyed2Stream
-      .window(TumblingEventTimeWindows.of(Time.days(1)))
-      .apply((key, win, it, coll) => new MyWindowFunction().apply(key, win, it.asJava, coll))
+    val aggregatedGlobal2Stream: DataStream[WindowResult] = keyed2Stream
+      .window(TumblingEventTimeWindows.of(Time.days(200)))
+      .apply((key, win, it, coll) => new MyWindowFunction(200).apply(key, win, it.asJava, coll))
+
+    val windowSizeInDays = 10
 
     //Windowed aggregation
-    /*val aggregatedWindow1Stream= keyed1Stream
-      .window(TumblingEventTimeWindows.of(Time.days(10)))
-      .apply(new MyWindowFunction())
-      .aggregate(new ProjectNameAggregation())*/
+    val aggregatedWindow1Stream: DataStream[WindowResult] = keyed1Stream
+      .window(TumblingEventTimeWindows.of(Time.days(windowSizeInDays)))
+      .apply((key, win, it, coll) => new MyWindowFunction(windowSizeInDays).apply(key, win, it.asJava, coll))
+
+    val aggregatedWindow2Stream: DataStream[WindowResult] = keyed2Stream
+      .window(TumblingEventTimeWindows.of(Time.days(windowSizeInDays)))
+      .apply((key, win, it, coll) => new MyWindowFunction(windowSizeInDays).apply(key, win, it.asJava, coll))
+
+    val header = "country,religionPrefix,actorNumber,count,avgGoldstein,avgAvgTone,quadClass1Percentage,quadClass2Percentage,quadClass3Percentage,quadClass4Percentage,windowIndex,windowStart\n"
 
     //CSV Sink
-    val file = new File("storage/export_global.csv")
-    file.delete()
+    val globalFile = new File("storage/export_global.csv")
+    globalFile.delete()
     if (exportHeader) {
-      FileUtils.writeStringToFile(file, "country,religionPrefix,actorNumber,count,avgGoldstein,avgAvgTone,sumQuadClass1,sumQuadClass2,sumQuadClass3,sumQuadClass4", true)
-    }
-    //aggregatedGlobal1Stream.addSink(res => FileUtils.writeStringToFile(file, res.productIterator.mkString(",") + "\n", true))
+      FileUtils.writeStringToFile(globalFile, header, true)
 
-    aggregatedGlobal2Stream.addSink(res => FileUtils.writeStringToFile(file, res.productIterator.mkString(",") + "\n", true))
+      (0 to 20).foreach(idx => {
+        val file = new File(s"storage/export_$idx.csv")
+        file.delete()
+        FileUtils.writeStringToFile(file, header, true)
+      })
+    }
+
+    aggregatedGlobal1Stream.addSink(res => FileUtils.writeStringToFile(globalFile, res.productIterator.mkString(",") + "\n", true))
+    aggregatedGlobal2Stream.addSink(res => FileUtils.writeStringToFile(globalFile, res.productIterator.mkString(",") + "\n", true))
+
+    aggregatedWindow1Stream.addSink(res => {
+      val file = new File(s"storage/export_${res.windowIndex}.csv")
+      FileUtils.writeStringToFile(file, res.productIterator.mkString(",") + "\n", true)
+    })
+    aggregatedWindow2Stream.addSink(res => {
+      val file = new File(s"storage/export_${res.windowIndex}.csv")
+      FileUtils.writeStringToFile(file, res.productIterator.mkString(",") + "\n", true)
+    })
 
     /*
     K-Means export, for ashery

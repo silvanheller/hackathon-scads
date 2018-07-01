@@ -10,7 +10,7 @@ import scala.collection.JavaConverters._
 /**
   * @author silvan on 01.07.18.
   */
-class MyWindowFunction() extends WindowFunction[GDELTEventWrapper, WindowResult, String, TimeWindow] {
+class MyWindowFunction(windowSizeInDays: Int) extends WindowFunction[GDELTEventWrapper, WindowResult, String, TimeWindow] {
 
   override def apply(key: String, w: TimeWindow, iterable: java.lang.Iterable[GDELTEventWrapper], collector: Collector[WindowResult]): Unit = {
     var country: String = ""
@@ -48,11 +48,11 @@ class MyWindowFunction() extends WindowFunction[GDELTEventWrapper, WindowResult,
       sumQuadClass2.toDouble / count.toDouble,
       sumQuadClass3.toDouble / count.toDouble,
       sumQuadClass4.toDouble / count.toDouble,
-      (w.getStart - 1487203200000L) / (1000 * 60 * 60 * 24),
+      (w.getStart - 1486080000000L) / (1000 * 60 * 60 * 24 * windowSizeInDays),
       w.getStart)
     collector.collect(res)
   }
 
 }
 
-case class WindowResult(var country: String, var religionPrefix: String, var actorNumber: Int, var count: Int, var avgGoldstein: Double, var avgAvgTone: Double, var sumQuadClass1: Double, var sumQuadClass2: Double, var sumQuadClass3: Double, var sumQuadClass4: Double, var windowIndex: Long, var windowStart: Long)
+case class WindowResult(var country: String, var religionPrefix: String, var actorNumber: Int, var count: Int, var avgGoldstein: Double, var avgAvgTone: Double, var quadClass1Percentage: Double, var quadClass2Percentage: Double, var quadClass3Percentage: Double, var quadClass4Percentage: Double, var windowIndex: Long, var windowStart: Long)

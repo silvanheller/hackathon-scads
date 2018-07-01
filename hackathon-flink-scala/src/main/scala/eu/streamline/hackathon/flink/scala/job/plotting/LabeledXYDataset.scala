@@ -1,5 +1,6 @@
-package eu.streamline.hackathon.flink.scala.job
+package eu.streamline.hackathon.flink.scala.job.plotting
 
+import eu.streamline.hackathon.flink.scala.job.{Counter, Goldstein, avgTone}
 import org.jfree.chart.labels.XYItemLabelGenerator
 import org.jfree.data.xy.{AbstractXYDataset, XYDataset}
 
@@ -11,7 +12,7 @@ class LabeledXYDataset extends AbstractXYDataset {
   private val label = new ListBuffer[String]()
   private val series = new ListBuffer[Number]()
 
-  def add(x: Double, y: Double, label: String, series: Int): Unit = {
+  def add(x: Goldstein, y: avgTone, label: String, series: Int): Unit = {
     this.x += x
     this.y += y
     this.label += label
