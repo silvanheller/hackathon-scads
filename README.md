@@ -1,6 +1,6 @@
 # Project "Ring Parable"
 
-This repository contains the stream processing code of the "Ring Parable" Project by Silvan Heller, Ashery Mbilinyi and Lukas Probst.
+This repository contains the stream processing code of the "Ring Parable" project by Silvan Heller, Ashery Mbilinyi and Lukas Probst.
 
 The goal of this project was to analyze how religions are represented in the dataset in terms of the average tone, goldstein metric and quad class.
 
