@@ -46,9 +46,9 @@ class MyWindowFunction(windowSizeInDays: Int) extends WindowFunction[GDELTEventW
         actorNumber = wrapper.actorNumber
       }
       count += 1
-      sumAvgTone += wrapper.gDELTEvent.avgTone
-      sumGoldstein += wrapper.gDELTEvent.goldstein
-      wrapper.gDELTEvent.quadClass.intValue() match {
+      sumAvgTone += wrapper.gdeltEvent.avgTone
+      sumGoldstein += wrapper.gdeltEvent.goldstein
+      wrapper.gdeltEvent.quadClass.intValue() match {
         case 1 => sumQuadClass1 += 1
         case 2 => sumQuadClass2 += 1
         case 3 => sumQuadClass3 += 1
@@ -82,4 +82,4 @@ class MyWindowFunction(windowSizeInDays: Int) extends WindowFunction[GDELTEventW
 /**
   * Simple case class for the new type the transformed stream output
   */
-case class WindowResult(var country: String, var religionPrefix: String, var actorNumber: Int, var count: Int, var avgGoldstein: Double, var avgAvgTone: Double, var quadClass1Percentage: Double, var quadClass2Percentage: Double, var quadClass3Percentage: Double, var quadClass4Percentage: Double, var windowIndex: Long, var windowStart: Long)
+case class WindowResult(var country: CountryCode, var religionPrefix: ReligionPrefix, var actorNumber: ActorNumber, var count: Int, var avgGoldstein: Double, var avgAvgTone: Double, var quadClass1Percentage: Double, var quadClass2Percentage: Double, var quadClass3Percentage: Double, var quadClass4Percentage: Double, var windowIndex: Long, var windowStart: Long)

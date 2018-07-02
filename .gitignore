@@ -30,5 +30,5 @@ download-cache
 hs_err_pid*
 
 
-.idea/
 storage/
+!storage/10k.csv

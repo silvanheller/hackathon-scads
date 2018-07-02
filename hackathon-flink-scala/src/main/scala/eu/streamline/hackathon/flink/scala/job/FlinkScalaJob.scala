@@ -29,7 +29,6 @@ object FlinkScalaJob {
 
   def main(args: Array[String]): Unit = {
 
-    val ashery = true
     val exportHeader = true
 
     val parameters = ParameterTool.fromArgs(args)
@@ -66,7 +65,8 @@ object FlinkScalaJob {
 
     /**
       * We are both interested in Actor 1 and Actor 2.
-      * The hacky way to parallelize this is to create two different streams which are then keyed by "CCRRR" where CC is the two-letter country code and RRR the three-letter top-level religionprefix.
+      * The hacky way to parallelize this is to create two different streams which are then keyed by "CCRRR" where CC is the two-letter country code and RRR the three-letter top-level religion-prefix as defined in the GDELT Codebook.
+      * Additionally, we transform the event to our [[GDELTEventWrapper]] to carry over information about the selected actor number for further processing.
       */
     val keyed1Stream = filteredStream
       .filter(event => event.actor1Geo_countryCode != null
@@ -82,7 +82,7 @@ object FlinkScalaJob {
 
     /**
       * The two keyed streams can be used for global aggregation and window aggregation.
-      * Global aggregation is performed over a 200-day window since we know this property of the dataset.
+      * Global aggregation is performed over a 200-day window since we know the dataset length is only 180 days.
       */
 
     /**
@@ -101,6 +101,8 @@ object FlinkScalaJob {
 
     /**
       * Then, windowed aggregation for actors one and two. Again done by applying the [[MyWindowFunction]]
+      *
+      * Be aware that the .asJava conversion is needed because the [[MyWindowFunction]] interface requires a [[java.lang.Iterable]]...
       */
     val aggregatedWindow1Stream: DataStream[WindowResult] = keyed1Stream
       .window(TumblingEventTimeWindows.of(Time.days(windowSizeInDays)))
@@ -115,17 +117,17 @@ object FlinkScalaJob {
       * Now, we simply export those to .csv-files
       */
 
-    val header = "country,religionPrefix,actorNumber,count,avgGoldstein,avgAvgTone,quadClass1Percentage,quadClass2Percentage,quadClass3Percentage,quadClass4Percentage,windowIndex,windowStart\n"
-
 
     /**
-      * Write the headers
+      * Write headers for the csv if the flag is set
       */
     val globalFile = new File("storage/export_global.csv")
     globalFile.delete()
     if (exportHeader) {
+      val header = "country,religionPrefix,actorNumber,count,avgGoldstein,avgAvgTone,quadClass1Percentage,quadClass2Percentage,quadClass3Percentage,quadClass4Percentage,windowIndex,windowStart\n"
       FileUtils.writeStringToFile(globalFile, header, true)
 
+      // Headers for the individual days
       (0 to 200 / windowSizeInDays).foreach(idx => {
         val file = new File(s"storage/export_$idx.csv")
         file.delete()
@@ -151,17 +153,6 @@ object FlinkScalaJob {
       FileUtils.writeStringToFile(file, res.productIterator.mkString(",") + "\n", true)
     })
 
-    /**
-      * K-Means export for ML Proof-of-concept
-      */
-    if (ashery) {
-      val f1 = new File("storage/kmeans_aggregated_1.csv")
-      f1.delete()
-      val header = "country,religion,goldstein,avgTone"
-      FileUtils.writeStringToFile(f1, s"$header\n", true)
-      aggregatedGlobal1Stream.addSink(res => FileUtils.writeStringToFile(f1, s"${res.country},${res.religionPrefix},${res.avgGoldstein},${res.avgAvgTone}\n", true))
-    }
-
     env.execute("Flink Scala GDELT Analyzer")
 
   }
@@ -171,4 +162,4 @@ object FlinkScalaJob {
 /**
   * Simplifies event-processing by carrying the actor-number which this particular stream is interested in.
   */
-case class GDELTEventWrapper(gDELTEvent: GDELTEvent, country: CountryCode, religionPrefix: ReligionPrefix, actorNumber: Int)
+case class GDELTEventWrapper(gdeltEvent: GDELTEvent, country: CountryCode, religionPrefix: ReligionPrefix, actorNumber: ActorNumber)

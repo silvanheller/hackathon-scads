@@ -14,4 +14,5 @@ package object job {
   type Goldstein = Double
   type avgTone = Double
   type CountryCode = String
+  type ActorNumber = Int
 }

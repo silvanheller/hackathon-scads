@@ -2,18 +2,22 @@
 
 This repository contains the stream processing code of the "Ring Parable" Project by Silvan Heller, Ashery Mbilinyi and Lukas Probst.
 
-We have chosen to use the Flink & Spark combination.
+The goal of this project was to analyze how religions are represented in the dataset in terms of the average tone, goldstein metric and quad class.
 
-The structure of both the repository and the code is base on the boilerplate code provided on [Github](https://github.com/TU-Berlin-DIMA/streamline-hackathon-boilerplate)
+The stream processing part of the project was implemented using Flink and Scala.
 
-We used the GDELT Dataset provided by the organizers of the Hackathon [1]
+Aggregate stream processing results are then visualized using a web-based UI which you can find on [Github](https://github.com/silvanheller/hackathon-scads-ui).
+
+The structure of both the repository and the code is base on the boilerplate code provided on [Github](https://github.com/TU-Berlin-DIMA/streamline-hackathon-boilerplate).
+
+We used the GDELT Dataset provided by the organizers of the Hackathon [1].
 
 ## Overview
 We aggregate by goldstein, avgTone and quadClass over religion-country combinations. Aggregate Results are stored in the `storage/` folder.
 
 ## Run The Code locally (Option 1)
 
-You may run the code from IntelliJ using the same entrypoint as in the boilerplate code.
+You may run the code from IntelliJ using the same entrypoint as in the boilerplate code - `eu.streamline.hackathon.flink.scala.job.FlinkScalaJob`
 
 ## Run The Code on your cluster (Option 2)
 
@@ -27,11 +31,13 @@ Please, be sure that a standalone (or cluster) version of Flink is running on yo
 
 Start the job: 
 ```
-# Scala Job
 /path/to/flink/root/bin/flink run \
 hackathon-flink-scala/target/hackathon-flink-scala-0.1-SNAPSHOT.jar \
 --path /path/to/data/180-days.csv
 ```
+
+## Fast testing & Development
+Executing the code takes ~10-15 minutes on a Lenovo X1-Carbon 2017. If you do not want to wait this long, we provide a massively reduced dataset (just 10k events) at `storage/10k.csv`. This works as a drop-in replacement for the original dataset.
 
 ## References
 [1] GDELT Projet: https://www.gdeltproject.org
