@@ -2,7 +2,7 @@
 
 This repository contains the stream processing code of the "Ring Parable" project by Silvan Heller, Ashery Mbilinyi and Lukas Probst.
 
-The goal of this project was to analyze how religions are represented in the dataset in terms of the average tone, goldstein metric and quad class.
+The goal of this project was to analyze how religions in different countries are represented in the dataset in terms of the average tone, goldstein metric and quad class.
 
 The stream processing part of the project was implemented using Flink and Scala.
 
@@ -13,7 +13,7 @@ The structure of both the repository and the code is base on the boilerplate cod
 We used the GDELT Dataset provided by the organizers of the Hackathon [1].
 
 ## Overview
-We aggregate by goldstein, avgTone and quadClass over religion-country combinations. Aggregate Results are stored in the `storage/` folder.
+We aggregate the goldstein, avgTone and quadClass measure over religion-country combinations for both actor 1 and 2. Aggregate results are stored in the `storage/` folder.
 
 ## Run The Code locally (Option 1)
 
