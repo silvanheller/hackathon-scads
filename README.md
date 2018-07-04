@@ -2,17 +2,23 @@
 
 This repository contains the stream processing code of the "Ring Parable" project by Silvan Heller, Ashery Mbilinyi and Lukas Probst.
 
-The goal of this project was to analyze how religions in different countries are represented in the dataset in terms of the average tone, goldstein metric and quad class.
+All over the world, people are biased and have prejudices based on their religion and culture. This induces two key questions:
 
-The stream processing part of the project was implemented using Flink and Scala.
+* Are there patterns in the interactions between religions in general or religions in certain countries?
+* Is there a bias in the dataset towards certain religions or regions? This could also be a hint at a bias in media reporting in general.
 
-Aggregate stream processing results are then visualized using a web-based UI which you can find on [Github](https://github.com/silvanheller/hackathon-scads-ui).
+The goal of the "Ring Parable" project was to tackle these two questions in the Streamline Hackathon 2018.
+
+This repository contains the code for the stream processing component.
+The results are further visualized using a web-based UI which you can find on [Github](https://github.com/silvanheller/hackathon-scads-ui).
+
+## Details
 
 The structure of both the repository and the code is base on the boilerplate code provided on [Github](https://github.com/TU-Berlin-DIMA/streamline-hackathon-boilerplate).
 
 We used the GDELT Dataset provided by the organizers of the Hackathon [1].
 
-## Overview
+The stream processing part of the project was implemented using Flink and Scala.
 We aggregate the goldstein, avgTone and quadClass measure over religion-country combinations for both actor 1 and 2. Aggregate results are stored in the `storage/` folder.
 
 ## Run The Code locally (Option 1)
